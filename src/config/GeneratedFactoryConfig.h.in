@@ -1,0 +1,9 @@
+#pragma once
+
+namespace config {
+
+inline constexpr char kFactoryConfigJson[] = R"json(
+@FACTORY_CONFIG_JSON@
+)json";
+
+}  // namespace config

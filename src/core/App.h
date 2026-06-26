@@ -1,0 +1,33 @@
+#pragma once
+
+#include "config/BootConfig.h"
+#include "config/ConfigManager.h"
+#include "devices/LedManager.h"
+#include "i2c/I2cManager.h"
+#include "mqtt/MqttManager.h"
+#include "network/EthernetManager.h"
+#include "storage/FlashConfigStore.h"
+#include "storage/SdCardManager.h"
+
+namespace core {
+
+class App {
+  public:
+    explicit App(const config::BootConfig& boot_config);
+
+    bool init();
+    void run();
+
+  private:
+    const config::BootConfig& boot_config_;
+    storage::SdCardManager sd_card_manager_;
+    storage::FlashConfigStore flash_config_store_;
+    config::ConfigManager config_manager_;
+    devices::LedManager led_manager_;
+    i2c_bus::I2cManager i2c_manager_;
+    network::EthernetManager ethernet_manager_;
+    mqtt::MqttManager mqtt_manager_;
+    bool initialized_;
+};
+
+}  // namespace core

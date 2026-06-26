@@ -1,0 +1,32 @@
+{
+  "config_version": 1,
+  "crc32": "00000000",
+  "device": {
+    "name": "w6300-access-gateway",
+    "mac": "02:63:00:12:34:56"
+  },
+  "ethernet": {
+    "mode": "dhcp",
+    "static": {
+      "ip": "192.168.1.60",
+      "subnet": "255.255.255.0",
+      "gateway": "192.168.1.1",
+      "dns": "192.168.1.1"
+    }
+  },
+  "mqtt": {
+    "broker": "192.168.1.6",
+    "port": 1883,
+    "client_id_prefix": "w6300",
+    "username": "mqtt_user",
+    "password": "mqtt123!",
+    "keep_alive_sec": 60,
+    "discovery_enabled": true,
+    "broadcast_destination_id": "0",
+    "subscribe_topic": "SPV1.0/access/+/+/+"
+  },
+  "led": {
+    "healthy_on_ms": 100,
+    "healthy_off_ms": 900
+  }
+}
