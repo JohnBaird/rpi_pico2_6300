@@ -38,6 +38,7 @@ add_executable(rpi_pico2_6300
     src/main.cpp
     src/config/ConfigManager.cpp
     src/core/App.cpp
+    src/devices/Ds2401Manager.cpp
     src/devices/LedManager.cpp
     src/i2c/I2cManager.cpp
     src/mqtt/MqttManager.cpp

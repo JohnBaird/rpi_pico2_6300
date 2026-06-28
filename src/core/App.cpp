@@ -11,6 +11,7 @@ App::App(const config::BootConfig& boot_config)
       sd_card_manager_(),
       flash_config_store_(),
       config_manager_(flash_config_store_),
+      ds2401_manager_(boot_config.one_wire),
       led_manager_(boot_config.led),
       i2c_manager_(),
       ethernet_manager_(),
@@ -37,6 +38,20 @@ bool App::init() {
     if (!config_manager_.init()) {
         std::printf("Error: config initialization failed (%s)\n", config_manager_.last_error());
         return false;
+    }
+
+    if (!ds2401_manager_.init()) {
+        std::printf("Warning: DS2401 initialization failed (%s)\n", ds2401_manager_.last_error());
+    } else {
+        char hardware_mac[18] = {0};
+        if (ds2401_manager_.read_mac_address(hardware_mac, sizeof(hardware_mac))) {
+            if (!config_manager_.override_device_mac(hardware_mac)) {
+                std::puts("Warning: failed to override runtime MAC with DS2401 value");
+            }
+        } else {
+            std::printf("Warning: DS2401 read failed (%s); using configured MAC instead\n",
+                        ds2401_manager_.last_error());
+        }
     }
 
     config_manager_.print_summary();

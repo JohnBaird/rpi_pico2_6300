@@ -19,6 +19,7 @@ class EthernetManager {
     bool configure_network(const config::RuntimeConfig& runtime_config);
     bool configure_static_network(const config::RuntimeConfig& runtime_config);
     bool run_dhcp_until_leased();
+    void print_active_ip_address() const;
 
     bool initialized_;
     bool dhcp_enabled_;

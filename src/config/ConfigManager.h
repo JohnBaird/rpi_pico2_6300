@@ -14,6 +14,7 @@ class ConfigManager {
     const char* last_error() const;
     const RuntimeConfig* runtime_config() const;
     void print_summary() const;
+    bool override_device_mac(const char* mac_text);
 
   private:
     bool load_active_config_from_littlefs();

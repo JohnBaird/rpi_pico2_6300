@@ -110,6 +110,15 @@ const RuntimeConfig* ConfigManager::runtime_config() const {
     return initialized_ ? &runtime_config_ : nullptr;
 }
 
+bool ConfigManager::override_device_mac(const char* mac_text) {
+    if (mac_text == nullptr) {
+        return false;
+    }
+
+    return copy_string(device_mac_, sizeof(device_mac_), mac_text,
+                       static_cast<unsigned int>(std::strlen(mac_text)));
+}
+
 void ConfigManager::print_summary() const {
     if (!initialized_) {
         std::puts("Config: summary unavailable");

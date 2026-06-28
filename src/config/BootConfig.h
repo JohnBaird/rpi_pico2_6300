@@ -13,8 +13,21 @@ struct LedConfig {
     bool active_high;
 };
 
+struct OneWireConfig {
+    int gpio_pin;
+    bool use_internal_pull_up;
+};
+
+struct StartupGateConfig {
+    int button_gpio_pin;
+    bool active_low;
+    bool use_internal_pull_up;
+};
+
 struct BootConfig {
     LedConfig led;
+    OneWireConfig one_wire;
+    StartupGateConfig startup_gate;
 };
 
 constexpr BootConfig kMilestone1BootConfig{
@@ -28,6 +41,23 @@ constexpr BootConfig kMilestone1BootConfig{
             .gpio_pin = -1,
 #endif
             .active_high = true,
+        },
+    .one_wire =
+        {
+            // GP6 stays clear of the current I2C bus (GP4/GP5) and SD SPI wiring
+            // (GP10-GP13), while landing next to GND on the Pico header for easy
+            // short-run 1-wire routing.
+            .gpio_pin = 6,
+            .use_internal_pull_up = false,
+        },
+    .startup_gate =
+        {
+            // GP22 is currently unused by the firmware and sits close to a GND pin
+            // on the Pico header, which makes it a good candidate for a simple
+            // push-button-to-ground startup gate.
+            .button_gpio_pin = 22,
+            .active_low = true,
+            .use_internal_pull_up = true,
         },
 };
 

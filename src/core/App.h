@@ -2,6 +2,7 @@
 
 #include "config/BootConfig.h"
 #include "config/ConfigManager.h"
+#include "devices/Ds2401Manager.h"
 #include "devices/LedManager.h"
 #include "i2c/I2cManager.h"
 #include "mqtt/MqttManager.h"
@@ -23,6 +24,7 @@ class App {
     storage::SdCardManager sd_card_manager_;
     storage::FlashConfigStore flash_config_store_;
     config::ConfigManager config_manager_;
+    devices::Ds2401Manager ds2401_manager_;
     devices::LedManager led_manager_;
     i2c_bus::I2cManager i2c_manager_;
     network::EthernetManager ethernet_manager_;

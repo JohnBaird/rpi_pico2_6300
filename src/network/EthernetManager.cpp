@@ -200,6 +200,7 @@ bool EthernetManager::configure_static_network(const config::RuntimeConfig& runt
 
     network_initialize(g_network_info);
     print_network_information(g_network_info);
+    print_active_ip_address();
     return true;
 }
 
@@ -239,6 +240,7 @@ void EthernetManager::handle_dhcp_assigned() {
     g_network_info.dhcp = NETINFO_DHCP;
     network_initialize(g_network_info);
     print_network_information(g_network_info);
+    print_active_ip_address();
     std::printf("Ethernet: DHCP lease time %lu seconds\n",
                 static_cast<unsigned long>(getDHCPLeasetime()));
     dhcp_leased_ = true;
@@ -247,6 +249,11 @@ void EthernetManager::handle_dhcp_assigned() {
 void EthernetManager::handle_dhcp_conflict() {
     dhcp_conflict_ = true;
     std::puts("Ethernet: DHCP reported an IP conflict");
+}
+
+void EthernetManager::print_active_ip_address() const {
+    std::printf("Ethernet: IP address %u.%u.%u.%u\n", g_network_info.ip[0], g_network_info.ip[1],
+                g_network_info.ip[2], g_network_info.ip[3]);
 }
 
 }  // namespace network
