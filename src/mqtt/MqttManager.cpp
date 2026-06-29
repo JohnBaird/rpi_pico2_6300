@@ -18,6 +18,7 @@ constexpr unsigned int kCommandTimeoutMs = 4000;
 constexpr unsigned int kYieldTimeoutMs = 25;
 constexpr unsigned int kSendBufferSize = 1024;
 constexpr unsigned int kReadBufferSize = 1024;
+constexpr const char* kControllerSerialPlaceholder = "<controller_serial>";
 
 MqttManager* g_active_manager = nullptr;
 Network g_network;
@@ -52,6 +53,7 @@ MqttManager::MqttManager()
       last_timer_tick_ms_(0),
       controller_serial_{},
       client_id_{},
+      subscribe_topic_{},
       discovery_response_topic_{},
       status_topic_{},
       status_payload_{},
@@ -85,6 +87,11 @@ bool MqttManager::init(const config::RuntimeConfig& runtime_config) {
                       "SPV1.0/system/stc_online_status_request/%s/%s", controller_serial_,
                       runtime_config.mqtt.broadcast_destination_id) < 0) {
         last_error_ = "status_topic_format_failed";
+        return false;
+    }
+
+    if (!build_subscribe_topic(runtime_config.mqtt.subscribe_topic)) {
+        last_error_ = "subscribe_topic_format_failed";
         return false;
     }
 
@@ -188,16 +195,16 @@ bool MqttManager::connect_client(const config::RuntimeConfig& runtime_config) {
 }
 
 bool MqttManager::subscribe_topics(const config::RuntimeConfig& runtime_config) {
-    int mqtt_result =
-        MQTTSubscribe(&g_client, runtime_config.mqtt.subscribe_topic, QOS0, mqtt_message_arrived);
+    std::printf("MQTT: subscribe template=%s\n", runtime_config.mqtt.subscribe_topic);
+
+    int mqtt_result = MQTTSubscribe(&g_client, subscribe_topic_, QOS0, mqtt_message_arrived);
     if (mqtt_result != SUCCESSS) {
-        std::printf("MQTT: subscribe failed rc=%d topic=%s\n", mqtt_result,
-                    runtime_config.mqtt.subscribe_topic);
+        std::printf("MQTT: subscribe failed rc=%d topic=%s\n", mqtt_result, subscribe_topic_);
         last_error_ = "mqtt_subscribe_failed";
         return false;
     }
 
-    std::printf("MQTT: subscribed topic=%s\n", runtime_config.mqtt.subscribe_topic);
+    std::printf("MQTT: subscribed topic=%s\n", subscribe_topic_);
 
     if (runtime_config.mqtt.discovery_enabled) {
         mqtt_result = MQTTSubscribe(&g_client, discovery_response_topic_, QOS0, mqtt_message_arrived);
@@ -219,7 +226,7 @@ bool MqttManager::publish_startup_status(const config::RuntimeConfig& runtime_co
         status_payload_, sizeof(status_payload_),
         "{\"controller_serial\":\"%s\",\"controller_name\":\"%s\",\"status\":\"online\","
         "\"milestone\":4,\"subscribe_topic\":\"%s\",\"port_in_payload\":true}",
-        controller_serial_, runtime_config.device.name, runtime_config.mqtt.subscribe_topic);
+        controller_serial_, runtime_config.device.name, subscribe_topic_);
     if (payload_length <= 0 || payload_length >= static_cast<int>(sizeof(status_payload_))) {
         last_error_ = "mqtt_status_payload_too_large";
         return false;
@@ -259,6 +266,31 @@ bool MqttManager::build_controller_serial_from_mac(const char* mac_text) {
     }
 
     return std::snprintf(controller_serial_, sizeof(controller_serial_), "%llu", mac_value) > 0;
+}
+
+bool MqttManager::build_subscribe_topic(const char* configured_topic) {
+    if (configured_topic == nullptr || configured_topic[0] == '\0') {
+        return false;
+    }
+
+    const char* placeholder = std::strstr(configured_topic, kControllerSerialPlaceholder);
+    if (placeholder == nullptr) {
+        return std::snprintf(subscribe_topic_, sizeof(subscribe_topic_), "%s", configured_topic) >
+               0;
+    }
+
+    const size_t prefix_length = static_cast<size_t>(placeholder - configured_topic);
+    const size_t placeholder_length = std::strlen(kControllerSerialPlaceholder);
+    const char* suffix = placeholder + placeholder_length;
+
+    if (std::strstr(suffix, kControllerSerialPlaceholder) != nullptr) {
+        return false;
+    }
+
+    const int written = std::snprintf(subscribe_topic_, sizeof(subscribe_topic_), "%.*s%s%s",
+                                      static_cast<int>(prefix_length), configured_topic,
+                                      controller_serial_, suffix);
+    return written > 0 && written < static_cast<int>(sizeof(subscribe_topic_));
 }
 
 bool MqttManager::parse_ipv4(const char* text, unsigned char out[4]) const {

@@ -41,7 +41,7 @@ The current firmware expects:
   "keep_alive_sec": 60,
   "discovery_enabled": true,
   "broadcast_destination_id": "0",
-  "subscribe_topic": "SPV1.0/access/+/+/+"
+  "subscribe_topic": "SPV1.0/+/+/+/<controller_serial>"
 }
 ```
 
@@ -49,14 +49,15 @@ Notes:
 
 - `broker` is currently treated as an IPv4 literal, not a hostname.
 - `broadcast_destination_id` is used when the startup status topic is published.
-- `subscribe_topic` is the main runtime subscription for Milestone 4.
+- `subscribe_topic` is a runtime template. `<controller_serial>` is replaced at startup with the
+  controller's MAC-derived decimal serial number.
 
 ## Important Current Behavior
 
 - On successful boot, the firmware publishes:
   - `SPV1.0/system/stc_online_status_request/<controller_serial>/<broadcast_destination_id>`
 - The controller also subscribes to:
-  - the configured access subscription topic
+  - the configured controller-addressed subscription topic after `<controller_serial>` expansion
   - the discovery-response topic when `discovery_enabled` is `true`
 - Received MQTT messages are not executed yet; their topics and payloads are printed and the SPV1.0 topic is parsed for verification.
 - The firmware now expects the port/interface value to be carried in the payload rather than as a topic segment.

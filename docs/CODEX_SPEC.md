@@ -442,7 +442,7 @@ This is a draft schema. Codex should use it as the starting point.
     "keep_alive_sec": 60,
     "discovery_enabled": true,
     "broadcast_destination_id": "0",
-    "subscribe_topic": "SPV1.0/access/+/+/+"
+    "subscribe_topic": "SPV1.0/+/+/+/<controller_serial>"
   },
 
   "time": {
@@ -477,14 +477,14 @@ This is a draft schema. Codex should use it as the starting point.
     "edge": "falling",
     "debounce_ms": 5,
     "pins": [
-      { "interface": 0, "pin": 10 },
-      { "interface": 1, "pin": 11 },
-      { "interface": 2, "pin": 12 },
-      { "interface": 3, "pin": 13 },
-      { "interface": 4, "pin": 14 },
-      { "interface": 5, "pin": 15 },
-      { "interface": 6, "pin": 16 },
-      { "interface": 7, "pin": 17 }
+      { "interface": 0, "pin": 14 },
+      { "interface": 1, "pin": 15 },
+      { "interface": 2, "pin": 16 },
+      { "interface": 3, "pin": 2 },
+      { "interface": 4, "pin": 3 },
+      { "interface": 5, "pin": 7 },
+      { "interface": 6, "pin": 8 },
+      { "interface": 7, "pin": 9 }
     ]
   },
 
@@ -585,7 +585,7 @@ This is a draft schema. Codex should use it as the starting point.
 }
 ```
 
-Pins in this draft are placeholders until final hardware pinout is confirmed.
+Some pins in this draft are now reserved or confirmed in the current project documentation, while others remain placeholders until final hardware pinout is confirmed.
 
 ---
 
@@ -1433,18 +1433,62 @@ The following items must still be supplied or confirmed.
 
 ### Hardware Pinout
 
-Need final values for:
+Current confirmed and reserved values:
 
 ```text
-SD card SPI pins
-I2C SDA/SCL pins
+SD card SPI SCK       GP10
+SD card SPI MOSI      GP11
+SD card SPI MISO      GP12
+SD card SPI CS        GP13
+
+I2C SDA               GP4
+I2C SCL               GP5
+
+DS2401 1-Wire         GP6
+
+Startup gate button   GP22
+  active-low
+  internal pull-up enabled
+
+W6300 QSPI SCK        GP17   board-reserved
+W6300 QSPI IO0        GP18   board-reserved
+W6300 QSPI IO1        GP19   board-reserved
+W6300 QSPI IO2        GP20   board-reserved
+W6300 QSPI IO3        GP21   board-reserved
+
+IRQ0                  GP14   reserved
+IRQ1                  GP15   reserved
+IRQ2                  GP16   reserved
+IRQ3                  GP2    reserved
+IRQ4                  GP3    reserved
+IRQ5                  GP7    reserved
+IRQ6                  GP8    reserved
+IRQ7                  GP9    reserved
+
+SD copy button        GP26   reserved
+  active-low
+  intended for external pull-up to 3V3 and button to GND
+  not implemented yet
+
+Available for future allocation:
+  GP27
+  GP28
+
+Board-managed / avoid for general allocation:
+  GP23   SMPS mode pin
+  GP24   VBUS sense
+  GP25   default status LED from board definition
+  GP29   VSYS monitor / ADC
+```
+
+Still to be confirmed:
+
+```text
 RS485 UART TX/RX pins
 RS485 RTS/DE pin
-Status LED pin
 LCD I2C address
 RTC I2C address
-IRQ0 to IRQ7 GPIO pins
-W6300 board support details
+RGB LED pins for SD-to-LittleFS import/status workflow
 ```
 
 ### RS485 Protocol

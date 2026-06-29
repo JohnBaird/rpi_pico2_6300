@@ -88,6 +88,62 @@ bool SdCardManager::read_text_file(const char* path, char* buffer, unsigned int 
     return true;
 }
 
+void SdCardManager::print_directory(const char* path) const {
+    if (!initialized_) {
+        std::puts("SD: directory listing skipped because card is not mounted");
+        return;
+    }
+
+    const char* directory_path = path;
+    if (directory_path == nullptr || directory_path[0] == '\0' ||
+        (directory_path[0] == '/' && directory_path[1] == '\0')) {
+        directory_path = "";
+    } else if (directory_path[0] == '/') {
+        directory_path = path + 1;
+    }
+
+    DIR directory;
+    FRESULT open_result = f_opendir(&directory, directory_path);
+    if (open_result != FR_OK) {
+        std::printf("SD: f_opendir(%s) failed: %s (%d)\n",
+                    directory_path[0] != '\0' ? directory_path : "/",
+                    FRESULT_str(open_result), open_result);
+        return;
+    }
+
+    std::printf("SD: listing %s\n", directory_path[0] != '\0' ? directory_path : "/");
+
+    while (true) {
+        FILINFO file_info;
+        std::memset(&file_info, 0, sizeof(file_info));
+        const FRESULT read_result = f_readdir(&directory, &file_info);
+        if (read_result != FR_OK) {
+            std::printf("SD: f_readdir(%s) failed: %s (%d)\n",
+                        directory_path[0] != '\0' ? directory_path : "/",
+                        FRESULT_str(read_result), read_result);
+            break;
+        }
+
+        if (file_info.fname[0] == '\0') {
+            break;
+        }
+
+        const bool is_directory = (file_info.fattrib & AM_DIR) != 0;
+        std::printf("SD:   %s %s", is_directory ? "[DIR ]" : "[FILE]", file_info.fname);
+        if (!is_directory) {
+            std::printf(" (%lu bytes)", static_cast<unsigned long>(file_info.fsize));
+        }
+        std::putchar('\n');
+    }
+
+    const FRESULT close_result = f_closedir(&directory);
+    if (close_result != FR_OK) {
+        std::printf("SD: f_closedir(%s) failed: %s (%d)\n",
+                    directory_path[0] != '\0' ? directory_path : "/",
+                    FRESULT_str(close_result), close_result);
+    }
+}
+
 bool SdCardManager::status() const { return initialized_; }
 
 const char* SdCardManager::last_error() const { return last_error_; }

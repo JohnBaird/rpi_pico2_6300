@@ -28,6 +28,8 @@ bool App::init() {
 
     if (!sd_card_manager_.init()) {
         std::printf("Warning: SD initialization failed (%s)\n", sd_card_manager_.last_error());
+    } else {
+        sd_card_manager_.print_directory("/");
     }
 
     if (!flash_config_store_.init()) {

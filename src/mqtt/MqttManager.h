@@ -20,6 +20,7 @@ class MqttManager {
     bool subscribe_topics(const config::RuntimeConfig& runtime_config);
     bool publish_startup_status(const config::RuntimeConfig& runtime_config);
     bool build_controller_serial_from_mac(const char* mac_text);
+    bool build_subscribe_topic(const char* configured_topic);
     bool parse_ipv4(const char* text, unsigned char out[4]) const;
     bool parse_spv1_topic(const char* topic) const;
 
@@ -28,6 +29,7 @@ class MqttManager {
     unsigned int last_timer_tick_ms_;
     char controller_serial_[24];
     char client_id_[64];
+    char subscribe_topic_[128];
     char discovery_response_topic_[96];
     char status_topic_[96];
     char status_payload_[256];

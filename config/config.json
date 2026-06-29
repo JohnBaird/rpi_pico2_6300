@@ -23,7 +23,7 @@
     "keep_alive_sec": 60,
     "discovery_enabled": true,
     "broadcast_destination_id": "0",
-    "subscribe_topic": "SPV1.0/access/+/+/+"
+    "subscribe_topic": "SPV1.0/+/+/+/<controller_serial>"
   },
   "led": {
     "healthy_on_ms": 100,
