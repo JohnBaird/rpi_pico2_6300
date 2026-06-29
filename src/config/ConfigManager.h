@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/BootConfig.h"
 #include "config/RuntimeConfig.h"
 #include "storage/FlashConfigStore.h"
 
@@ -7,7 +8,8 @@ namespace config {
 
 class ConfigManager {
   public:
-    explicit ConfigManager(storage::FlashConfigStore& flash_config_store);
+    ConfigManager(storage::FlashConfigStore& flash_config_store, ConfigSourceMode config_source_mode,
+                  bool block_on_factory_config_crc_mismatch);
 
     bool init();
     bool status() const;
@@ -18,7 +20,8 @@ class ConfigManager {
 
   private:
     bool load_active_config_from_littlefs();
-    bool load_factory_default();
+    bool audit_factory_config_crc();
+    bool load_factory_default(const char* source_name);
     bool seed_littlefs_from_factory(const char* reason);
     bool load_and_apply_config_text(const char* json_text, const char* source_name,
                                     bool verify_crc);
@@ -37,12 +40,19 @@ class ConfigManager {
                               unsigned int destination_size);
     bool extract_uint_value(const char* section_start, const char* key, uint32_t* out_value);
     bool extract_bool_value(const char* section_start, const char* key, bool* out_value);
+    bool extract_string_array(const char* section_start, const char* key, char destinations[][128],
+                              unsigned int destination_count, uint32_t* out_count);
+    bool extract_object_keys(const char* section_start, const char* key, char destinations[][24],
+                             unsigned int destination_count, uint32_t* out_count);
 
     storage::FlashConfigStore& flash_config_store_;
     RuntimeConfig runtime_config_;
+    ConfigSourceMode config_source_mode_;
+    bool block_on_factory_config_crc_mismatch_;
     bool initialized_;
     char device_name_[64];
     char device_mac_[32];
+    char device_git_number_[32];
     char ethernet_mode_[16];
     char ethernet_static_ip_[32];
     char ethernet_static_subnet_[32];
@@ -53,7 +63,8 @@ class ConfigManager {
     char mqtt_username_[64];
     char mqtt_password_[64];
     char mqtt_broadcast_destination_id_[32];
-    char mqtt_subscribe_topic_[128];
+    char mqtt_subscribe_topics_[kMaxSubscribeTopics][128];
+    char mqtt_publish_to_server_ids_[kMaxPublishServers][24];
     char config_source_[16];
     uint32_t config_crc32_;
     char config_buffer_[4096];

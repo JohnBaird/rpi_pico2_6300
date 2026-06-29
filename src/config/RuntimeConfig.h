@@ -4,9 +4,13 @@
 
 namespace config {
 
+constexpr unsigned int kMaxPublishServers = 8;
+constexpr unsigned int kMaxSubscribeTopics = 8;
+
 struct DeviceConfig {
     const char* name;
     const char* mac;
+    const char* git_number;
 };
 
 struct EthernetConfig {
@@ -26,7 +30,10 @@ struct MqttConfig {
     uint32_t keep_alive_sec;
     bool discovery_enabled;
     const char* broadcast_destination_id;
-    const char* subscribe_topic;
+    const char* subscribe_topics[kMaxSubscribeTopics];
+    uint32_t subscribe_topic_count;
+    const char* publish_to_server_ids[kMaxPublishServers];
+    uint32_t publish_to_server_count;
 };
 
 struct LedRuntimeConfig {

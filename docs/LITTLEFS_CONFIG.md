@@ -4,6 +4,15 @@
 
 The controller now keeps its active runtime configuration in onboard flash using LittleFS.
 
+Temporary development note:
+
+- `src/config/BootConfig.h` currently selects `ConfigSourceMode::factory_only`
+- in this mode the firmware uses the embedded factory config from `config/config.json`
+- LittleFS is left intact and is not initialized as the active config store during boot
+- startup prints the stored and computed factory `crc32` values and whether they match
+- `block_on_factory_config_crc_mismatch` in `BootConfig.h` can make a bad embedded CRC fatal later
+- switch back to `ConfigSourceMode::littlefs_primary` when LittleFS-based development resumes
+
 Startup order is:
 
 1. Mount LittleFS
@@ -49,6 +58,10 @@ At boot, firmware computes the correct CRC32 and writes it into the in-memory fa
 - If `/config.json` is missing, firmware seeds LittleFS from the factory config.
 - If `/config.json` fails CRC or schema checks, firmware attempts `/config.bak.json`.
 - If both are invalid, firmware restores the factory config.
+
+These recovery steps apply when `ConfigSourceMode::littlefs_primary` is active. In
+`ConfigSourceMode::factory_only`, LittleFS recovery is bypassed so the existing flash contents
+remain unchanged during development.
 
 ## Planned Next Steps
 

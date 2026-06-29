@@ -4,6 +4,8 @@
 #include "config/ConfigManager.h"
 #include "devices/Ds2401Manager.h"
 #include "devices/LedManager.h"
+#include "devices/Mcp9808TemperatureSensor.h"
+#include "devices/Rp2350TemperatureSensor.h"
 #include "i2c/I2cManager.h"
 #include "mqtt/MqttManager.h"
 #include "network/EthernetManager.h"
@@ -26,6 +28,8 @@ class App {
     config::ConfigManager config_manager_;
     devices::Ds2401Manager ds2401_manager_;
     devices::LedManager led_manager_;
+    devices::Mcp9808TemperatureSensor temperature_sensor_;
+    devices::Rp2350TemperatureSensor cpu_temperature_sensor_;
     i2c_bus::I2cManager i2c_manager_;
     network::EthernetManager ethernet_manager_;
     mqtt::MqttManager mqtt_manager_;

@@ -6,6 +6,11 @@
 
 namespace config {
 
+enum class ConfigSourceMode {
+    littlefs_primary,
+    factory_only,
+};
+
 struct LedConfig {
     uint32_t healthy_on_ms;
     uint32_t healthy_off_ms;
@@ -28,6 +33,8 @@ struct BootConfig {
     LedConfig led;
     OneWireConfig one_wire;
     StartupGateConfig startup_gate;
+    ConfigSourceMode config_source_mode;
+    bool block_on_factory_config_crc_mismatch;
 };
 
 constexpr BootConfig kMilestone1BootConfig{
@@ -59,6 +66,8 @@ constexpr BootConfig kMilestone1BootConfig{
             .active_low = true,
             .use_internal_pull_up = true,
         },
+    .config_source_mode = ConfigSourceMode::factory_only,
+    .block_on_factory_config_crc_mismatch = false,
 };
 
 }  // namespace config

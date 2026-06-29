@@ -41,12 +41,17 @@ bool write_hex32(char* destination, uint32_t value) {
 
 }  // namespace
 
-ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store)
+ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store,
+                             ConfigSourceMode config_source_mode,
+                             bool block_on_factory_config_crc_mismatch)
     : flash_config_store_(flash_config_store),
+      config_source_mode_(config_source_mode),
+      block_on_factory_config_crc_mismatch_(block_on_factory_config_crc_mismatch),
       runtime_config_{},
       initialized_(false),
       device_name_{},
       device_mac_{},
+      device_git_number_{},
       ethernet_mode_{},
       ethernet_static_ip_{},
       ethernet_static_subnet_{},
@@ -57,7 +62,8 @@ ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store)
       mqtt_username_{},
       mqtt_password_{},
       mqtt_broadcast_destination_id_{},
-      mqtt_subscribe_topic_{},
+      mqtt_subscribe_topics_{},
+      mqtt_publish_to_server_ids_{},
       config_source_{},
       config_crc32_(0),
       config_buffer_{},
@@ -65,6 +71,7 @@ ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store)
       last_error_("not_initialized") {
     runtime_config_.device.name = device_name_;
     runtime_config_.device.mac = device_mac_;
+    runtime_config_.device.git_number = device_git_number_;
     runtime_config_.ethernet.mode = ethernet_mode_;
     runtime_config_.ethernet.static_ip = ethernet_static_ip_;
     runtime_config_.ethernet.static_subnet = ethernet_static_subnet_;
@@ -75,7 +82,14 @@ ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store)
     runtime_config_.mqtt.username = mqtt_username_;
     runtime_config_.mqtt.password = mqtt_password_;
     runtime_config_.mqtt.broadcast_destination_id = mqtt_broadcast_destination_id_;
-    runtime_config_.mqtt.subscribe_topic = mqtt_subscribe_topic_;
+    for (unsigned int i = 0; i < kMaxSubscribeTopics; ++i) {
+        runtime_config_.mqtt.subscribe_topics[i] = mqtt_subscribe_topics_[i];
+    }
+    runtime_config_.mqtt.subscribe_topic_count = 0;
+    for (unsigned int i = 0; i < kMaxPublishServers; ++i) {
+        runtime_config_.mqtt.publish_to_server_ids[i] = mqtt_publish_to_server_ids_[i];
+    }
+    runtime_config_.mqtt.publish_to_server_count = 0;
     runtime_config_.config_source = config_source_;
     runtime_config_.config_crc32 = 0;
 }
@@ -87,14 +101,26 @@ bool ConfigManager::init() {
     config_source_[0] = '\0';
     config_crc32_ = 0;
 
-    if (load_active_config_from_littlefs()) {
-        initialized_ = true;
-    } else {
-        std::printf("Config: LittleFS active config unavailable (%s)\n", last_error_);
-        if (!load_factory_default()) {
+    if (!audit_factory_config_crc()) {
+        return false;
+    }
+
+    if (config_source_mode_ == ConfigSourceMode::factory_only) {
+        std::puts("Config: factory_only mode enabled; LittleFS active config bypassed");
+        if (!load_factory_default("factory-forced")) {
             return false;
         }
         initialized_ = true;
+    } else {
+        if (load_active_config_from_littlefs()) {
+            initialized_ = true;
+        } else {
+            std::printf("Config: LittleFS active config unavailable (%s)\n", last_error_);
+            if (!load_factory_default("factory")) {
+                return false;
+            }
+            initialized_ = true;
+        }
     }
 
     last_error_ = "ok";
@@ -129,6 +155,7 @@ void ConfigManager::print_summary() const {
     std::printf("Config: crc32=%08lX\n", static_cast<unsigned long>(runtime_config_.config_crc32));
     std::printf("Config: device.name=%s\n", runtime_config_.device.name);
     std::printf("Config: device.mac=%s\n", runtime_config_.device.mac);
+    std::printf("Config: device.git_number=%s\n", runtime_config_.device.git_number);
     std::printf("Config: ethernet.mode=%s\n", runtime_config_.ethernet.mode);
     if (runtime_config_.ethernet.static_ip[0] != '\0') {
         std::printf("Config: ethernet.static.ip=%s\n", runtime_config_.ethernet.static_ip);
@@ -145,7 +172,18 @@ void ConfigManager::print_summary() const {
                 runtime_config_.mqtt.discovery_enabled ? "true" : "false");
     std::printf("Config: mqtt.broadcast_destination_id=%s\n",
                 runtime_config_.mqtt.broadcast_destination_id);
-    std::printf("Config: mqtt.subscribe_topic=%s\n", runtime_config_.mqtt.subscribe_topic);
+    std::printf("Config: mqtt.subscribe_topic_count=%lu\n",
+                static_cast<unsigned long>(runtime_config_.mqtt.subscribe_topic_count));
+    for (uint32_t i = 0; i < runtime_config_.mqtt.subscribe_topic_count; ++i) {
+        std::printf("Config: mqtt.subscribe_topics[%lu]=%s\n", static_cast<unsigned long>(i),
+                    runtime_config_.mqtt.subscribe_topics[i]);
+    }
+    std::printf("Config: mqtt.publish_to_server_count=%lu\n",
+                static_cast<unsigned long>(runtime_config_.mqtt.publish_to_server_count));
+    for (uint32_t i = 0; i < runtime_config_.mqtt.publish_to_server_count; ++i) {
+        std::printf("Config: mqtt.publish_to_servers[%lu]=%s\n", static_cast<unsigned long>(i),
+                    runtime_config_.mqtt.publish_to_server_ids[i]);
+    }
     std::printf("Config: led.healthy_on_ms=%lu\n",
                 static_cast<unsigned long>(runtime_config_.led.healthy_on_ms));
     std::printf("Config: led.healthy_off_ms=%lu\n",
@@ -188,14 +226,49 @@ bool ConfigManager::load_active_config_from_littlefs() {
     return true;
 }
 
-bool ConfigManager::load_factory_default() {
+bool ConfigManager::audit_factory_config_crc() {
+    const unsigned int factory_length = static_cast<unsigned int>(std::strlen(kFactoryConfigJson));
+    if (!copy_string(scratch_buffer_, sizeof(scratch_buffer_), kFactoryConfigJson, factory_length)) {
+        last_error_ = "factory_config_too_large";
+        return false;
+    }
+
+    uint32_t stored_crc32 = 0;
+    char* crc_value_start = nullptr;
+    if (!extract_crc32_value(scratch_buffer_, &stored_crc32, &crc_value_start)) {
+        std::puts("Config: factory config crc32 field missing or invalid");
+        last_error_ = "factory_crc32_missing";
+        return !block_on_factory_config_crc_mismatch_;
+    }
+
+    std::memset(crc_value_start, '0', 8);
+    const uint32_t computed_crc32 =
+        compute_crc32(scratch_buffer_, static_cast<unsigned int>(std::strlen(scratch_buffer_)));
+    const bool crc_ok = stored_crc32 == computed_crc32;
+
+    std::printf("Config: factory crc32 stored=%08lX computed=%08lX crc_ok=%s\n",
+                static_cast<unsigned long>(stored_crc32),
+                static_cast<unsigned long>(computed_crc32), crc_ok ? "true" : "false");
+
+    if (!crc_ok) {
+        last_error_ = "factory_crc32_mismatch";
+        if (block_on_factory_config_crc_mismatch_) {
+            std::puts("Config: blocking boot because factory config CRC mismatch is enforced");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool ConfigManager::load_factory_default(const char* source_name) {
     unsigned int config_length = 0;
     if (!prepare_factory_config_text(config_buffer_, sizeof(config_buffer_), &config_length)) {
         last_error_ = "factory_config_prepare_failed";
         return false;
     }
 
-    if (!load_and_apply_config_text(config_buffer_, "factory", true)) {
+    if (!load_and_apply_config_text(config_buffer_, source_name, true)) {
         return false;
     }
 
@@ -204,7 +277,7 @@ bool ConfigManager::load_factory_default() {
 }
 
 bool ConfigManager::seed_littlefs_from_factory(const char* reason) {
-    if (!load_factory_default()) {
+    if (!load_factory_default("factory")) {
         return false;
     }
 
@@ -419,6 +492,12 @@ bool ConfigManager::parse_runtime_config(const char* json_text) {
         return false;
     }
 
+    if (!extract_string_value(json_text, "\"git_number\"", device_git_number_,
+                              sizeof(device_git_number_))) {
+        last_error_ = "missing_git_number";
+        return false;
+    }
+
     if (!extract_string_value(ethernet_section, "\"mode\"", ethernet_mode_,
                               sizeof(ethernet_mode_))) {
         last_error_ = "missing_ethernet_mode";
@@ -502,16 +581,21 @@ bool ConfigManager::parse_runtime_config(const char* json_text) {
         return false;
     }
 
-    if (!extract_string_value(mqtt_section, "\"broadcast_destination_id\"",
-                              mqtt_broadcast_destination_id_,
-                              sizeof(mqtt_broadcast_destination_id_))) {
-        last_error_ = "missing_mqtt_broadcast_destination_id";
+    mqtt_broadcast_destination_id_[0] = '\0';
+    extract_string_value(mqtt_section, "\"broadcast_destination_id\"", mqtt_broadcast_destination_id_,
+                         sizeof(mqtt_broadcast_destination_id_));
+
+    runtime_config_.mqtt.subscribe_topic_count = 0;
+    if (!extract_string_array(mqtt_section, "\"subscribe_topics\"", mqtt_subscribe_topics_,
+                              kMaxSubscribeTopics, &runtime_config_.mqtt.subscribe_topic_count)) {
+        last_error_ = "invalid_mqtt_subscribe_topics";
         return false;
     }
 
-    if (!extract_string_value(mqtt_section, "\"subscribe_topic\"", mqtt_subscribe_topic_,
-                              sizeof(mqtt_subscribe_topic_))) {
-        last_error_ = "missing_mqtt_subscribe_topic";
+    runtime_config_.mqtt.publish_to_server_count = 0;
+    if (!extract_object_keys(mqtt_section, "\"publish_to_servers\"", mqtt_publish_to_server_ids_,
+                             kMaxPublishServers, &runtime_config_.mqtt.publish_to_server_count)) {
+        last_error_ = "invalid_mqtt_publish_to_servers";
         return false;
     }
 
@@ -530,7 +614,8 @@ bool ConfigManager::parse_runtime_config(const char* json_text) {
 }
 
 bool ConfigManager::validate_runtime_config() const {
-    if (runtime_config_.device.name[0] == '\0' || runtime_config_.device.mac[0] == '\0') {
+    if (runtime_config_.device.name[0] == '\0' || runtime_config_.device.mac[0] == '\0' ||
+        runtime_config_.device.git_number[0] == '\0') {
         return false;
     }
 
@@ -556,8 +641,11 @@ bool ConfigManager::validate_runtime_config() const {
     }
 
     if (runtime_config_.mqtt.client_id_prefix[0] == '\0' ||
-        runtime_config_.mqtt.broadcast_destination_id[0] == '\0' ||
-        runtime_config_.mqtt.subscribe_topic[0] == '\0') {
+        runtime_config_.mqtt.subscribe_topic_count == 0) {
+        return false;
+    }
+
+    if (runtime_config_.mqtt.publish_to_server_count == 0) {
         return false;
     }
 
@@ -639,6 +727,143 @@ bool ConfigManager::extract_bool_value(const char* section_start, const char* ke
     if (std::strncmp(colon + 1, " false", 6) == 0 || std::strncmp(colon + 1, "false", 5) == 0) {
         *out_value = false;
         return true;
+    }
+
+    return false;
+}
+
+bool ConfigManager::extract_string_array(const char* section_start, const char* key,
+                                         char destinations[][128], unsigned int destination_count,
+                                         uint32_t* out_count) {
+    if (out_count != nullptr) {
+        *out_count = 0;
+    }
+
+    const char* key_start = std::strstr(section_start, key);
+    if (key_start == nullptr) {
+        return false;
+    }
+
+    const char* colon = std::strchr(key_start, ':');
+    if (colon == nullptr) {
+        return false;
+    }
+
+    const char* array_start = std::strchr(colon, '[');
+    if (array_start == nullptr) {
+        return false;
+    }
+
+    const char* cursor = array_start + 1;
+    uint32_t count = 0;
+    while (*cursor != '\0') {
+        while (*cursor == ' ' || *cursor == '\n' || *cursor == '\r' || *cursor == '\t' ||
+               *cursor == ',') {
+            ++cursor;
+        }
+
+        if (*cursor == ']') {
+            if (out_count != nullptr) {
+                *out_count = count;
+            }
+            return count > 0;
+        }
+
+        if (*cursor != '"') {
+            return false;
+        }
+
+        ++cursor;
+        const char* value_end = std::strchr(cursor, '"');
+        if (value_end == nullptr || count >= destination_count) {
+            return false;
+        }
+
+        const unsigned int value_length = static_cast<unsigned int>(value_end - cursor);
+        if (!copy_string(destinations[count], 128, cursor, value_length)) {
+            return false;
+        }
+        ++count;
+        cursor = value_end + 1;
+    }
+
+    return false;
+}
+
+bool ConfigManager::extract_object_keys(const char* section_start, const char* key,
+                                        char destinations[][24], unsigned int destination_count,
+                                        uint32_t* out_count) {
+    if (out_count != nullptr) {
+        *out_count = 0;
+    }
+
+    const char* key_start = std::strstr(section_start, key);
+    if (key_start == nullptr) {
+        return true;
+    }
+
+    const char* colon = std::strchr(key_start, ':');
+    if (colon == nullptr) {
+        return false;
+    }
+
+    const char* object_start = std::strchr(colon, '{');
+    if (object_start == nullptr) {
+        return false;
+    }
+
+    const char* cursor = object_start + 1;
+    uint32_t count = 0;
+    while (*cursor != '\0') {
+        while (*cursor == ' ' || *cursor == '\n' || *cursor == '\r' || *cursor == '\t' ||
+               *cursor == ',') {
+            ++cursor;
+        }
+
+        if (*cursor == '}') {
+            if (out_count != nullptr) {
+                *out_count = count;
+            }
+            return true;
+        }
+
+        if (*cursor != '"') {
+            return false;
+        }
+
+        ++cursor;
+        const char* key_end = std::strchr(cursor, '"');
+        if (key_end == nullptr) {
+            return false;
+        }
+
+        if (count >= destination_count) {
+            return false;
+        }
+
+        const unsigned int key_length = static_cast<unsigned int>(key_end - cursor);
+        if (!copy_string(destinations[count], 24, cursor, key_length)) {
+            return false;
+        }
+        ++count;
+
+        const char* value_colon = std::strchr(key_end, ':');
+        if (value_colon == nullptr) {
+            return false;
+        }
+
+        const char* value_start = std::strchr(value_colon, '"');
+        if (value_start == nullptr) {
+            return false;
+        }
+        ++value_start;
+
+        const char* value_end = std::strchr(value_start, '"');
+        if (value_end == nullptr) {
+            return false;
+        }
+
+        cursor = value_end + 1;
     }
 
     return false;

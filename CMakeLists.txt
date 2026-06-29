@@ -40,6 +40,8 @@ add_executable(rpi_pico2_6300
     src/core/App.cpp
     src/devices/Ds2401Manager.cpp
     src/devices/LedManager.cpp
+    src/devices/Mcp9808TemperatureSensor.cpp
+    src/devices/Rp2350TemperatureSensor.cpp
     src/i2c/I2cManager.cpp
     src/mqtt/MqttManager.cpp
     src/network/EthernetManager.cpp
@@ -94,6 +96,7 @@ target_compile_definitions(rpi_pico2_6300 PRIVATE
 
 target_link_libraries(rpi_pico2_6300
     no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
+    hardware_adc
     hardware_clocks
     hardware_dma
     hardware_flash

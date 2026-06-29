@@ -441,8 +441,14 @@ This is a draft schema. Codex should use it as the starting point.
     "password": "",
     "keep_alive_sec": 60,
     "discovery_enabled": true,
-    "broadcast_destination_id": "0",
-    "subscribe_topic": "SPV1.0/+/+/+/<controller_serial>"
+    "subscribe_topics": [
+      "SPV1.0/ident/+/+/<controller_serial>",
+      "SPV1.0/access/+/+/<controller_serial>"
+    ],
+    "publish_to_servers": {
+      "51918423475411": "ROCWatch & Monitor_64",
+      "256508198617407": "ROCWatch & Monitor_133"
+    }
   },
 
   "time": {
@@ -494,7 +500,7 @@ This is a draft schema. Codex should use it as the starting point.
     "baud": 9600,
     "tx_pin": 0,
     "rx_pin": 1,
-    "rts_pin": 2,
+    "rts_pin": 28,
     "timeout_ms": 100,
     "retry_count": 3,
     "retry_delay_ms": 50,
@@ -720,39 +726,39 @@ Controller stores monitor serial number in RAM.
 Controller publishes future transaction results to the monitor.
 ```
 
-Controller broadcast topic:
+Controller online status topic:
 
 ```text
-SPV1.0/system/stc_online_status_request/<controller_serial>/0
+SPV1.0/access/stc_online_status_response/<monitor_serial>/<controller_serial>
 ```
 
-Monitor response topic:
+Startup online status payload example:
 
 ```text
-SPV1.0/system/stc_online_status_response/<monitor_serial>/<controller_serial>
-```
-
-Monitor response payload example:
-
-```json
 {
-  "_iD": "abc123",
-  "monitor_serial": "281261212083555",
-  "controller_serial": "256508198617407",
-  "controller_name": "w6300-gateway-01",
-  "mqtt_keepalive_sec": 60,
-  "timestamp_utc": "2026-05-16T12:00:00Z"
+  "_iD": "188d63c33d2048d7868064c9",
+  "clientId": "w6300-235728860741632",
+  "programVersion": "W6300 Access Gateway",
+  "lastUpdated": "Jun 29 2026 13:15:00",
+  "git_number": "00000000",
+  "controller_name": "w6300-ROC PACS Interface",
+  "hostName": "w6300-146",
+  "ipAddress": "192.168.1.146",
+  "dateTime": "2026/06/29 13:18:00",
+  "unixTime": 1782753480,
+  "response": "online",
+  "reason": "restarted"
 }
 ```
 
 Controller behavior:
 
 ```text
-1. Send online discovery broadcast.
-2. Wait for response.
-3. Validate response destination matches controller serial.
-4. Store monitor_serial as runtime monitor destination ID.
-5. Publish future transactions to that monitor_serial.
+1. Publish online status response to each configured monitor destination.
+2. Use controller serial as the topic source ID.
+3. Use each configured monitor/server ID as the topic destination ID.
+4. Include current IP address, RTC time, git number, and restart reason in the payload.
+5. Publish future transactions to the same monitor destination IDs.
 ```
 
 ---
@@ -1470,9 +1476,12 @@ SD copy button        GP26   reserved
   intended for external pull-up to 3V3 and button to GND
   not implemented yet
 
-Available for future allocation:
-  GP27
-  GP28
+RESET_OUT             GP27   reserved
+  output used to reset all downstream I2C devices at startup
+
+RS485 TXD             GP0    reserved
+RS485 RXD             GP1    reserved
+RS485 RTS/DE          GP28   reserved
 
 Board-managed / avoid for general allocation:
   GP23   SMPS mode pin
@@ -1484,8 +1493,6 @@ Board-managed / avoid for general allocation:
 Still to be confirmed:
 
 ```text
-RS485 UART TX/RX pins
-RS485 RTS/DE pin
 LCD I2C address
 RTC I2C address
 RGB LED pins for SD-to-LittleFS import/status workflow

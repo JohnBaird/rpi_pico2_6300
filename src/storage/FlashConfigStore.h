@@ -15,6 +15,7 @@ class FlashConfigStore {
     FlashConfigStore();
 
     bool init();
+    bool mount_read_only();
     bool is_mounted() const;
     const char* last_error() const;
 

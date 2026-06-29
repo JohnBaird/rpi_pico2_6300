@@ -1,9 +1,10 @@
 {
   "config_version": 1,
   "crc32": "00000000",
+  "git_number": "00000000",
   "device": {
     "name": "w6300-access-gateway",
-    "mac": "02:63:00:12:34:56"
+    "mac": "01:23:45:67:89:10"
   },
   "ethernet": {
     "mode": "dhcp",
@@ -15,15 +16,22 @@
     }
   },
   "mqtt": {
-    "broker": "192.168.1.6",
+    "broker": "192.168.1.64",
     "port": 1883,
     "client_id_prefix": "w6300",
     "username": "mqtt_user",
     "password": "mqtt123!",
     "keep_alive_sec": 60,
     "discovery_enabled": true,
-    "broadcast_destination_id": "0",
-    "subscribe_topic": "SPV1.0/+/+/+/<controller_serial>"
+    "subscribe_topics": [
+      "SPV1.0/ident/+/+/<controller_serial>",
+      "SPV1.0/access/+/+/<controller_serial>"
+    ],
+    "publish_to_servers": {
+        "51918423475411": "ROCWatch & Monitor_64",
+        "256508198617407": "ROCWatch & Monitor_133"
+    }
+
   },
   "led": {
     "healthy_on_ms": 100,

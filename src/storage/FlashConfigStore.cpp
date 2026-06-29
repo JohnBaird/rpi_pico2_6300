@@ -71,6 +71,24 @@ bool FlashConfigStore::init() {
     return format_and_mount();
 }
 
+bool FlashConfigStore::mount_read_only() {
+    std::printf("LittleFS: read-only mount request offset=0x%08lx size=%lu bytes\n",
+                static_cast<unsigned long>(kLittleFsPartitionOffsetBytes),
+                static_cast<unsigned long>(kLittleFsPartitionSizeBytes));
+
+    if (!check_partition_bounds()) {
+        last_error_ = "flash_partition_overlaps_firmware";
+        return false;
+    }
+
+    if (mounted_) {
+        last_error_ = "ok";
+        return true;
+    }
+
+    return mount();
+}
+
 bool FlashConfigStore::is_mounted() const { return mounted_; }
 
 const char* FlashConfigStore::last_error() const { return last_error_; }

@@ -32,6 +32,52 @@ Example identification message:
   - `timestamp`
   - `mqtt_target`
 
+Current staged implementation:
+
+- The first implemented MQTT-only command pair is:
+  - request: `SPV1.0/ident/roc_access_request/<source>/<controller_serial>`
+  - response: `SPV1.0/access/stc_access_response/<controller_serial>/<publish_to_servers key>`
+- In this staged version, the gateway:
+  - validates the topic
+  - parses `_iD`, `badgeId`, `accessPort`, `firstname`, `lastname`, and `timestamp`
+  - prints clear serial logs for RX and TX
+  - publishes a synthetic response with `response=accepted` and `reason=wiegand_queued`
+  - fans that response out to every configured `publish_to_servers` destination
+  - preserves the original request sender inside the payload as `serialSource`
+- No I2C action is performed yet for this command pair. That linkage will be added later behind the same MQTT contract.
+
+Current staged `access` status implementation:
+
+- Request: `SPV1.0/access/stc_input_status_request/<source>/<controller_serial>`
+- Response: `SPV1.0/access/stc_input_status_response/<controller_serial>/<source>`
+- In the first staged version, the gateway:
+  - copies `_iD` from the request
+  - returns gateway identity, host/IP, and RTC time
+  - returns `inputLevelsBitmap: 0`
+  - returns `inputs: {}`
+  - returns `response: "ok"` and `reason: "requested"`
+
+Current staged config-file implementation:
+
+- Request: `SPV1.0/access/stc_config_file_request/<source>/<controller_serial>`
+- Response: `SPV1.0/access/stc_config_file_response/<controller_serial>/<source>`
+- In the first staged version, the gateway:
+  - reads LittleFS `/config.json`
+  - does not fall back to the embedded factory config
+  - returns the LittleFS file content as JSON in `content`
+  - returns `response: "error"` when LittleFS is unavailable or `/config.json` is missing
+
+Current staged temperature implementation:
+
+- Request: `SPV1.0/access/stc_temperature_request/<source>/<controller_serial>`
+- Response: `SPV1.0/access/stc_temperature_response/<controller_serial>/<source>`
+- In the first staged version, the gateway:
+  - reads one raw value from the RP2350 internal temperature sensor as `CPU_temp`
+  - reads one raw value from the dedicated I2C `0x18` sensor module as `MCP9808_0x18`
+  - uses MCP9808-style register `0x05` decoding for the `0x18` sensor
+  - does not implement history, averaging, max/min, or buffering
+  - publishes two separate current-temperature responses in Celsius when both sensors are available
+
 ## I2C Address Mapping
 
 The gateway supports a maximum of 8 downstream devices on I2C addresses `0x30` through `0x37`.
