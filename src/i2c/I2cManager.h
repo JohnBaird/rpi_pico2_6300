@@ -1,5 +1,8 @@
 #pragma once
 
+#include "i2c/I2cCommandTransport.h"
+#include "i2c/PiWiegandDeviceManager.h"
+
 namespace i2c_bus {
 
 class I2cManager {
@@ -12,13 +15,13 @@ class I2cManager {
     const char* last_error() const;
 
   private:
-    bool probe_address(unsigned char address) const;
     bool read_rtc();
     void scan_bus();
     void probe_expected_devices();
-    void probe_wiegand_processors();
     void probe_lcd();
 
+    I2cCommandTransport transport_;
+    PiWiegandDeviceManager wiegand_device_manager_;
     bool initialized_;
     const char* last_error_;
 };
