@@ -1,0 +1,128 @@
+{
+    "file": {
+        "file_name": "wiegand.json",
+        "created": "2022-09-27 11:17:13",
+        "updated": "2024-08-09 12:43:40"
+    },
+    "keypad_codes": {
+        "1": 225,
+        "2": 210,
+        "3": 195,
+        "4": 180,
+        "5": 165,
+        "6": 150,
+        "7": 135,
+        "8": 120,
+        "9": 105,
+        "*": 90,
+        "0": 240,
+        "#": 75,
+        "A": 60,
+        "B": 45,
+        "C": 30,
+        "D": 15
+    },
+    "facility_codes_wi": {
+        "facility_0": 0,
+        "facility_6": 6,
+        "facility_7": 7,
+        "facility_20": 20,
+        "facility_28": 28,
+        "facility_35": 35,
+        "facility_54": 54,
+        "facility_100": 100,
+        "facility_107": 107,
+        "facility_123": 123,
+        "facility_207": 207,
+        "facility_232": 232,
+        "facility_248": 248,
+        "facility_6154": 6154,
+        "facility_7425": 7425
+    },
+    "facility_codes_wo": {
+        "facility_0": 0,
+        "facility_35": 35,
+        "facility_123": 123,
+        "facility_254": 254
+    },
+    "wiegand_26": {
+        "bit_len": 26,
+        "parity_bit_0": 25,
+        "parity_bit_1": 0,
+        "parity_type_bit_0": "even",
+        "parity_type_bit_1": "odd",
+        "facility_code_mask": "01111111100000000000000000",
+        "card_number_mask": "00000000011111111111111110",
+        "parity_mask_bits_0": "11111111111110000000000000",
+        "parity_mask_bits_1": "00000000000001111111111111"
+    },
+    "wiegand_30": {
+        "bit_len": 30,
+        "card_number_mask": "111111111111111111111111111111"
+    },
+    "wiegand_32": {
+        "bit_len": 32,
+        "parity_bit_0": 31,
+        "parity_bit_1": 0,
+        "parity_type_bit_0": "even",
+        "parity_type_bit_1": "odd",
+        "facility_code_mask": "01111111111111000000000000000000",
+        "card_number_mask": "00000000000000111111111111111110",
+        "parity_mask_bits_0": "11111111111111110000000000000000",
+        "parity_mask_bits_1": "00000000000000001111111111111111"
+    },
+    "wiegand_34": {
+        "bit_len": 34,
+        "parity_bit_0": 33,
+        "parity_bit_1": 0,
+        "parity_type_bit_0": "even",
+        "parity_type_bit_1": "odd",
+        "facility_code_mask": "0111111111111000000000000000000000",
+        "card_number_mask": "0000000000000111111111111111111110",
+        "parity_mask_bits_0": "1111111111111111110000000000000000",
+        "parity_mask_bits_1": "0000000000000000111111111111111111"
+    },
+    "wiegand_35": {
+        "bit_len": 35,
+        "parity_bit_0": 33,
+        "parity_bit_1": 0,
+        "parity_bit_2": 34,
+        "parity_type_bit_0": "even",
+        "parity_type_bit_1": "odd",
+        "parity_type_bit_2": "odd",
+        "facility_code_mask": "00111111111111100000000000000000000",
+        "card_number_mask": "00000000000000011111111111111111110",
+        "parity_mask_bits_0": "01110110110110110110110110110110110",
+        "parity_mask_bits_1": "01101101101101101101101101101101101",
+        "parity_mask_bits_2": "11111111111111111111111111111111111"
+    },
+    "wiegand_37": {
+        "bit_len": 37,
+        "parity_bit_0": 36,
+        "parity_bit_1": 0,
+        "parity_type_bit_0": "even",
+        "parity_type_bit_1": "odd",
+        "facility_code_mask": 0,
+        "card_number_mask": "0111111111111111111111111111111111110",
+        "parity_mask_bits_0": "1111111111111111111000000000000000000",
+        "parity_mask_bits_1": "0000000000000000001111111111111111111"
+    },
+    "wiegand_44": {
+        "bit_len": 44,
+        "card_number_mask": "11111111111111111111111111111111111111111111"
+    },
+    "wiegand_48": {
+        "bit_len": 48,
+        "parity_bit_0": 46,
+        "parity_bit_1": 0,
+        "parity_bit_2": 47,
+        "parity_type_bit_0": "even",
+        "parity_type_bit_1": "odd",
+        "parity_type_bit_2": "odd",
+        "facility_code_mask": "001111111111111111111111000000000000000000000000",
+        "card_number_mask": "000000000000000000000000111111111111111111111110",
+        "parity_mask_bits_0": "010110110110110110110110110110110110110110110110",
+        "parity_mask_bits_1": "001101101101101101101101101101101101101101101101",
+        "parity_mask_bits_2": "111111111111111111111111111111111111111111111111"
+    }
+}

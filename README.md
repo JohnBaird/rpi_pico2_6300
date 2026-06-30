@@ -11,6 +11,7 @@ https://eshop.wiznet.io/shop/module/w6300-evb-pico2/
 - Milestone 3 notes: [`docs/MILESTONE_3.md`](docs/MILESTONE_3.md)
 - Milestone 4 notes: [`docs/MILESTONE_4.md`](docs/MILESTONE_4.md)
 - Milestone 5 notes: [`docs/MILESTONE_5.md`](docs/MILESTONE_5.md)
+- Milestone 6 notes: [`docs/MILESTONE_6.md`](docs/MILESTONE_6.md)
 - Access-control design: [`docs/ACCESS_CONTROL_DESIGN.md`](docs/ACCESS_CONTROL_DESIGN.md)
 - Next milestones: [`docs/NEXT_MILESTONES.md`](docs/NEXT_MILESTONES.md)
 - LittleFS config store: [`docs/LITTLEFS_CONFIG.md`](docs/LITTLEFS_CONFIG.md)
@@ -49,6 +50,7 @@ Use `git rev-parse --short HEAD` to see the current short git number from the re
 |   |-- MILESTONE_3.md
 |   |-- MILESTONE_4.md
 |   |-- MILESTONE_5.md
+|   |-- MILESTONE_6.md
 |   `-- LITTLEFS_CONFIG.md
 `-- src/
     |-- main.cpp
@@ -63,7 +65,7 @@ Use `git rev-parse --short HEAD` to see the current short git number from the re
 
 ## Milestone Status
 
-The repo now has working Milestone 1 and Milestone 2 bring-up, plus Milestone 3 Ethernet, Milestone 4 MQTT, and a first Milestone 5 I2C bring-up implementation ready for hardware verification:
+The repo now has working Milestone 1 and Milestone 2 bring-up, plus Milestone 3 Ethernet, Milestone 4 MQTT, and an active Milestone 5 I2C protocol bring-up with live downstream-device validation:
 
 - Pico SDK project skeleton
 - official C++ / Pico SDK workflow
@@ -73,12 +75,20 @@ The repo now has working Milestone 1 and Milestone 2 bring-up, plus Milestone 3 
 - DHCP/static Ethernet startup using the W6300 stack
 - MQTT connect, subscribe, and status publish
 - I2C scan and RTC/LCD/Wiegand address probing
+- extracted `I2cCommandTransport`, `PiWiegandI2cDevice`, and `PiWiegandDeviceManager` classes
+- verified `0x78` build-info reads on live devices at `0x30` and `0x31`
+- verified `0x79` event reads on live devices at `0x30` and `0x31`
+- verified `0x21` Wiegand-out status reads on live devices at `0x30` and `0x31`
+- verified `0x20` Wiegand-out send on `0x30` with test bitstring `10101010`
+- confirmed downstream Wiegand output on `0x30` with external sniffer capture `8,10101010`
 - DS2401 serial read at startup with MAC override priority over config
 - startup serial gate on `GP22` so reset messages can be captured on demand
 - Ethernet IP address printed during startup
 - modular `App`, `LedManager`, `SdCardManager`, `ConfigManager`, `I2cManager`, `EthernetManager`, and `MqttManager` classes
 
-Full LCD behavior, richer RTC support, and the wider access-control application logic are still deferred to later milestones.
+The next implementation seam is now a generic Wiegand builder that uses `config/config.json` plus `config/wiegand.json` to generate real per-address credential frames before MQTT is linked to the downstream send path.
+
+Full LCD behavior, richer RTC support, generic Wiegand-frame building, and the wider access-control application logic are still deferred to later milestones.
 
 ## Access-Control Design
 

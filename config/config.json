@@ -31,10 +31,35 @@
         "51918423475411": "ROCWatch & Monitor_64",
         "256508198617407": "ROCWatch & Monitor_133"
     }
-
   },
-  "led": {
-    "healthy_on_ms": 100,
-    "healthy_off_ms": 900
+  "wiegand_settings": {
+    "wiegand_output_enable": true,
+    "wiegand_panel_feedback": false,
+    "facility_code_check_enable": true,
+    "panel_decision_timeout_value": 2700,
+    "wiegand_access_denied_code": "6666",
+    "wiegand_in": "passthrough",
+    "wi_valid_bits": {
+      "enable": true,
+      "lengths": [
+        48
+      ]
+    },
+    "wiegand_output_format":{
+      "addr_0x30": "wiegand_48",
+      "addr_0x31": "wiegand_48",
+      "addr_0x32": "wiegand_48",
+      "addr_0x33": "wiegand_48"
+    },
+    "wiegand_output_facility_codes":{
+      "addr_0x30": "8361",
+      "addr_0x31": "8361",
+      "addr_0x32": "8361",
+      "addr_0x33": "8361"
+    },
+    "led": {
+      "healthy_on_ms": 100,
+      "healthy_off_ms": 900
+    }
   }
 }
