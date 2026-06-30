@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/RuntimeConfig.h"
 #include "i2c/I2cCommandTransport.h"
 #include "i2c/PiWiegandDeviceManager.h"
 
@@ -9,7 +10,9 @@ class I2cManager {
   public:
     I2cManager();
 
-    bool init();
+    bool init(const config::RuntimeConfig& runtime_config);
+    bool send_configured_wiegand_frame(unsigned char interface_index, uint32_t card_number,
+                                       ConfiguredWiegandSendResult* result) const;
     void service();
     bool status() const;
     const char* last_error() const;

@@ -39,6 +39,40 @@ bool write_hex32(char* destination, uint32_t value) {
     return true;
 }
 
+bool build_wiegand_address_key(unsigned int interface_index, char* destination,
+                               unsigned int destination_size) {
+    if (destination == nullptr || destination_size < 10U) {
+        return false;
+    }
+
+    const int written = std::snprintf(destination, destination_size, "\"addr_0x%02X\"",
+                                      interface_index + 0x30U);
+    return written > 0 && static_cast<unsigned int>(written) < destination_size;
+}
+
+bool parse_uint32_text(const char* value_start, uint32_t* out_value) {
+    if (value_start == nullptr || out_value == nullptr) {
+        return false;
+    }
+
+    while (*value_start == ' ' || *value_start == '\n' || *value_start == '\r' ||
+           *value_start == '\t') {
+        ++value_start;
+    }
+
+    if (*value_start == '"') {
+        ++value_start;
+    }
+
+    unsigned long parsed_value = 0;
+    if (std::sscanf(value_start, "%lu", &parsed_value) != 1) {
+        return false;
+    }
+
+    *out_value = static_cast<uint32_t>(parsed_value);
+    return true;
+}
+
 }  // namespace
 
 ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store,
@@ -64,6 +98,8 @@ ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store,
       mqtt_broadcast_destination_id_{},
       mqtt_subscribe_topics_{},
       mqtt_publish_to_server_ids_{},
+      wiegand_output_formats_{},
+      wiegand_test_card_numbers_{},
       config_source_{},
       config_crc32_(0),
       config_buffer_{},
@@ -90,6 +126,12 @@ ConfigManager::ConfigManager(storage::FlashConfigStore& flash_config_store,
         runtime_config_.mqtt.publish_to_server_ids[i] = mqtt_publish_to_server_ids_[i];
     }
     runtime_config_.mqtt.publish_to_server_count = 0;
+    runtime_config_.wiegand.output_enabled = false;
+    for (unsigned int i = 0; i < kMaxWiegandInterfaces; ++i) {
+        runtime_config_.wiegand.output_formats[i] = wiegand_output_formats_[i];
+        runtime_config_.wiegand.output_facility_codes[i] = 0;
+        runtime_config_.wiegand.test_card_numbers[i] = 0;
+    }
     runtime_config_.config_source = config_source_;
     runtime_config_.config_crc32 = 0;
 }
@@ -188,6 +230,17 @@ void ConfigManager::print_summary() const {
                 static_cast<unsigned long>(runtime_config_.led.healthy_on_ms));
     std::printf("Config: led.healthy_off_ms=%lu\n",
                 static_cast<unsigned long>(runtime_config_.led.healthy_off_ms));
+    std::printf("Config: wiegand.output_enabled=%s\n",
+                runtime_config_.wiegand.output_enabled ? "true" : "false");
+    for (unsigned int i = 0; i < kMaxWiegandInterfaces; ++i) {
+        if (runtime_config_.wiegand.output_formats[i][0] == '\0') {
+            continue;
+        }
+        std::printf("Config: wiegand.output_formats[%u]=%s facility_code=%lu test_card_number=%lu\n", i,
+                    runtime_config_.wiegand.output_formats[i],
+                    static_cast<unsigned long>(runtime_config_.wiegand.output_facility_codes[i]),
+                    static_cast<unsigned long>(runtime_config_.wiegand.test_card_numbers[i]));
+    }
 }
 
 bool ConfigManager::load_active_config_from_littlefs() {
@@ -470,14 +523,17 @@ bool ConfigManager::write_config_meta(const char* active_source, const char* las
 }
 
 bool ConfigManager::parse_runtime_config(const char* json_text) {
-    const char* device_section = find_section(json_text, "\"device\"");
+    const char* file_info_section = find_section(json_text, "\"file_info\"");
     const char* ethernet_section = find_section(json_text, "\"ethernet\"");
+    const char* device_section =
+        ethernet_section != nullptr ? find_section(ethernet_section, "\"device\"") : nullptr;
     const char* ethernet_static_section = find_section(json_text, "\"static\"");
     const char* mqtt_section = find_section(json_text, "\"mqtt\"");
     const char* led_section = find_section(json_text, "\"led\"");
+    const char* wiegand_settings_section = find_section(json_text, "\"wiegand_settings\"");
 
-    if (device_section == nullptr || ethernet_section == nullptr || mqtt_section == nullptr ||
-        led_section == nullptr) {
+    if (file_info_section == nullptr || device_section == nullptr || ethernet_section == nullptr ||
+        mqtt_section == nullptr || led_section == nullptr) {
         last_error_ = "missing_required_section";
         return false;
     }
@@ -492,7 +548,7 @@ bool ConfigManager::parse_runtime_config(const char* json_text) {
         return false;
     }
 
-    if (!extract_string_value(json_text, "\"git_number\"", device_git_number_,
+    if (!extract_string_value(file_info_section, "\"git_number\"", device_git_number_,
                               sizeof(device_git_number_))) {
         last_error_ = "missing_git_number";
         return false;
@@ -610,6 +666,54 @@ bool ConfigManager::parse_runtime_config(const char* json_text) {
         return false;
     }
 
+    runtime_config_.wiegand.output_enabled = false;
+    if (wiegand_settings_section != nullptr &&
+        !extract_bool_value(wiegand_settings_section, "\"wiegand_output_enable\"",
+                            &runtime_config_.wiegand.output_enabled)) {
+        runtime_config_.wiegand.output_enabled = false;
+    }
+
+    const char* wiegand_output_format_section =
+        wiegand_settings_section != nullptr
+            ? find_section(wiegand_settings_section, "\"wiegand_output_format\"")
+            : nullptr;
+    const char* wiegand_output_facility_section =
+        wiegand_settings_section != nullptr
+            ? find_section(wiegand_settings_section, "\"wiegand_output_facility_codes\"")
+            : nullptr;
+    const char* wiegand_test_card_numbers_section =
+        wiegand_settings_section != nullptr
+            ? find_section(wiegand_settings_section, "\"wiegand_test_card_numbers\"")
+            : nullptr;
+
+    for (unsigned int interface_index = 0; interface_index < kMaxWiegandInterfaces; ++interface_index) {
+        wiegand_output_formats_[interface_index][0] = '\0';
+        runtime_config_.wiegand.output_facility_codes[interface_index] = 0;
+        runtime_config_.wiegand.test_card_numbers[interface_index] = 0;
+
+        char address_key[16] = {0};
+        if (!build_wiegand_address_key(interface_index, address_key, sizeof(address_key))) {
+            last_error_ = "wiegand_address_key_failed";
+            return false;
+        }
+
+        if (wiegand_output_format_section != nullptr) {
+            extract_string_value(wiegand_output_format_section, address_key,
+                                 wiegand_output_formats_[interface_index],
+                                 sizeof(wiegand_output_formats_[interface_index]));
+        }
+
+        if (wiegand_output_facility_section != nullptr) {
+            extract_uint_value(wiegand_output_facility_section, address_key,
+                               &runtime_config_.wiegand.output_facility_codes[interface_index]);
+        }
+
+        if (wiegand_test_card_numbers_section != nullptr) {
+            extract_uint_value(wiegand_test_card_numbers_section, address_key,
+                               &runtime_config_.wiegand.test_card_numbers[interface_index]);
+        }
+    }
+
     return true;
 }
 
@@ -699,13 +803,7 @@ bool ConfigManager::extract_uint_value(const char* section_start, const char* ke
         return false;
     }
 
-    unsigned long parsed_value = 0;
-    if (std::sscanf(colon + 1, " %lu", &parsed_value) != 1) {
-        return false;
-    }
-
-    *out_value = static_cast<uint32_t>(parsed_value);
-    return true;
+    return parse_uint32_text(colon + 1, out_value);
 }
 
 bool ConfigManager::extract_bool_value(const char* section_start, const char* key, bool* out_value) {

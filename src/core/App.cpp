@@ -71,7 +71,7 @@ bool App::init() {
         return false;
     }
 
-    if (!i2c_manager_.init()) {
+    if (!i2c_manager_.init(*runtime_config)) {
         std::printf("Error: I2C initialization failed (%s)\n", i2c_manager_.last_error());
         return false;
     }

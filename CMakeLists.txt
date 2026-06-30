@@ -24,10 +24,23 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Re-run CMake when the embedded factory config changes so GeneratedFactoryConfig.h
+# always matches config/config.json.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_LIST_DIR}/config/config.json"
+    "${CMAKE_CURRENT_LIST_DIR}/config/wiegand.json"
+)
+
 file(READ "${CMAKE_CURRENT_LIST_DIR}/config/config.json" FACTORY_CONFIG_JSON)
+file(READ "${CMAKE_CURRENT_LIST_DIR}/config/wiegand.json" WIEGAND_CONFIG_JSON)
 configure_file(
     "${CMAKE_CURRENT_LIST_DIR}/src/config/GeneratedFactoryConfig.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/GeneratedFactoryConfig.h"
+    @ONLY
+)
+configure_file(
+    "${CMAKE_CURRENT_LIST_DIR}/src/config/GeneratedWiegandConfig.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/GeneratedWiegandConfig.h"
     @ONLY
 )
 
@@ -46,6 +59,7 @@ add_executable(rpi_pico2_6300
     src/i2c/I2cManager.cpp
     src/i2c/PiWiegandI2cDevice.cpp
     src/i2c/PiWiegandDeviceManager.cpp
+    src/wiegand/WiegandBuilder.cpp
     src/mqtt/MqttManager.cpp
     src/network/EthernetManager.cpp
     src/storage/FlashConfigStore.cpp

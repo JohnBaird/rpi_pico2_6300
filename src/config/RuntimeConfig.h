@@ -6,6 +6,7 @@ namespace config {
 
 constexpr unsigned int kMaxPublishServers = 8;
 constexpr unsigned int kMaxSubscribeTopics = 8;
+constexpr unsigned int kMaxWiegandInterfaces = 8;
 
 struct DeviceConfig {
     const char* name;
@@ -41,11 +42,19 @@ struct LedRuntimeConfig {
     uint32_t healthy_off_ms;
 };
 
+struct WiegandRuntimeConfig {
+    bool output_enabled;
+    const char* output_formats[kMaxWiegandInterfaces];
+    uint32_t output_facility_codes[kMaxWiegandInterfaces];
+    uint32_t test_card_numbers[kMaxWiegandInterfaces];
+};
+
 struct RuntimeConfig {
     DeviceConfig device;
     EthernetConfig ethernet;
     MqttConfig mqtt;
     LedRuntimeConfig led;
+    WiegandRuntimeConfig wiegand;
     const char* config_source;
     uint32_t config_crc32;
 };

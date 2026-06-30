@@ -1,12 +1,18 @@
 {
-  "config_version": 1,
-  "crc32": "00000000",
-  "git_number": "00000000",
-  "device": {
-    "name": "w6300-access-gateway",
-    "mac": "01:23:45:67:89:10"
+  "file_info": {
+    "filename": "config.json",
+    "created": "2022-09-27 11:17:13",
+    "updated": "2026-05-26 11:43:40",
+    "program_version": "V0.0.1",
+    "git_number": "2b0465f",
+    "config_version": 1,
+    "crc32": "00000000"
   },
   "ethernet": {
+    "device": {
+      "name": "w6300-access-gateway",
+      "mac": "01:23:45:67:89:10"
+    },
     "mode": "dhcp",
     "static": {
       "ip": "192.168.1.60",
@@ -52,14 +58,20 @@
       "addr_0x33": "wiegand_48"
     },
     "wiegand_output_facility_codes":{
-      "addr_0x30": "8361",
+      "addr_0x30": "8360",
       "addr_0x31": "8361",
-      "addr_0x32": "8361",
-      "addr_0x33": "8361"
+      "addr_0x32": "8362",
+      "addr_0x33": "8363"
     },
-    "led": {
-      "healthy_on_ms": 100,
-      "healthy_off_ms": 900
+      "wiegand_test_card_numbers": {
+      "addr_0x30": "10810",
+      "addr_0x31": "10811",
+      "addr_0x32": "10812",
+      "addr_0x33": "10813"
     }
+  },
+  "led": {
+    "healthy_on_ms": 100,
+    "healthy_off_ms": 900
   }
 }

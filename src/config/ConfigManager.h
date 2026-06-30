@@ -65,6 +65,8 @@ class ConfigManager {
     char mqtt_broadcast_destination_id_[32];
     char mqtt_subscribe_topics_[kMaxSubscribeTopics][128];
     char mqtt_publish_to_server_ids_[kMaxPublishServers][24];
+    char wiegand_output_formats_[kMaxWiegandInterfaces][32];
+    uint32_t wiegand_test_card_numbers_[kMaxWiegandInterfaces];
     char config_source_[16];
     uint32_t config_crc32_;
     char config_buffer_[4096];

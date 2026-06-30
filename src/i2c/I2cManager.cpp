@@ -35,7 +35,7 @@ I2cManager::I2cManager()
       initialized_(false),
       last_error_("not_initialized") {}
 
-bool I2cManager::init() {
+bool I2cManager::init(const config::RuntimeConfig& runtime_config) {
     std::printf("I2C: initializing i2c0 on SDA=GP%u SCL=GP%u\n", kSdaPin, kSclPin);
 
     i2c_init(kI2cInstance, kI2cBaudRate);
@@ -44,7 +44,7 @@ bool I2cManager::init() {
     gpio_pull_up(kSdaPin);
     gpio_pull_up(kSclPin);
 
-    wiegand_device_manager_.init(&transport_, kWiegandBaseAddress, kWiegandCount);
+    wiegand_device_manager_.init(&transport_, kWiegandBaseAddress, kWiegandCount, &runtime_config);
 
     scan_bus();
     probe_expected_devices();
@@ -58,6 +58,11 @@ bool I2cManager::init() {
     initialized_ = true;
     last_error_ = "ok";
     return true;
+}
+
+bool I2cManager::send_configured_wiegand_frame(unsigned char interface_index, uint32_t card_number,
+                                               ConfiguredWiegandSendResult* result) const {
+    return wiegand_device_manager_.send_configured_wiegand_frame(interface_index, card_number, result);
 }
 
 void I2cManager::service() {}

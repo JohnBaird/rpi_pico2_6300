@@ -1,0 +1,9 @@
+#pragma once
+
+namespace config {
+
+inline constexpr char kWiegandConfigJson[] = R"json(
+@WIEGAND_CONFIG_JSON@
+)json";
+
+}  // namespace config
