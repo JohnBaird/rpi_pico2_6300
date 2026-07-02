@@ -82,7 +82,7 @@ The repo now has working Milestone 1 and Milestone 2 bring-up, plus Milestone 3 
 - verified `0x20` Wiegand-out send on `0x30` with test bitstring `10101010`
 - confirmed downstream Wiegand output on `0x30` with external sniffer capture `8,10101010`
 - DS2401 serial read at startup with MAC override priority over config
-- startup serial gate on `GP22` so reset messages can be captured on demand
+- startup serial gate on `GP9` so reset messages can be captured on demand
 - Ethernet IP address printed during startup
 - modular `App`, `LedManager`, `SdCardManager`, `ConfigManager`, `I2cManager`, `EthernetManager`, and `MqttManager` classes
 

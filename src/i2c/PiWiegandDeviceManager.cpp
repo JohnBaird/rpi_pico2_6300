@@ -53,7 +53,7 @@ bool PiWiegandDeviceManager::send_configured_wiegand_frame(
     result->facility_code = 0U;
     result->card_number = card_number;
     result->bit_string[0] = '\0';
-    result->send_result = WiegandOutSendResult{};
+    result->send_result = Rp2350PacsProtocol::WiegandOutSendReply{};
     result->error_reason = "unknown";
 
     if (runtime_config_ == nullptr) {
@@ -66,7 +66,7 @@ bool PiWiegandDeviceManager::send_configured_wiegand_frame(
         return false;
     }
 
-    const PiWiegandI2cDevice& device = devices_[interface_index];
+    const PacsControllerDevice& device = devices_[interface_index];
     result->address = device.address();
     result->facility_code = runtime_config_->wiegand.output_facility_codes[interface_index];
 
@@ -108,9 +108,24 @@ bool PiWiegandDeviceManager::send_configured_wiegand_frame(
     return true;
 }
 
+PacsControllerDevice* PiWiegandDeviceManager::find_device_by_interface(unsigned char interface_index) {
+    if (interface_index >= device_count_) {
+        return nullptr;
+    }
+    return &devices_[interface_index];
+}
+
+const PacsControllerDevice* PiWiegandDeviceManager::find_device_by_interface(
+    unsigned char interface_index) const {
+    if (interface_index >= device_count_) {
+        return nullptr;
+    }
+    return &devices_[interface_index];
+}
+
 void PiWiegandDeviceManager::probe_and_log_devices() const {
     for (unsigned char i = 0; i < device_count_; ++i) {
-        PiWiegandI2cDevice& device = const_cast<PiWiegandI2cDevice&>(devices_[i]);
+        PacsControllerDevice& device = const_cast<PacsControllerDevice&>(devices_[i]);
         if (!device.probe_presence()) {
             std::printf("I2C: Wiegand processor %u at 0x%02X missing\n", device.interface_index(),
                         device.address());
@@ -132,10 +147,22 @@ void PiWiegandDeviceManager::probe_and_log_devices() const {
         std::printf("I2C: build-info response for interface %u at 0x%02X: %s\n",
                     device.interface_index(), device.address(), build_info);
 
+        char runtime_config[Rp2350PacsProtocol::kRuntimeConfigMaxLength + 1] = {0};
+        std::printf("I2C: sending runtime-config probe to interface %u address 0x%02X command=0x7A\n",
+                    device.interface_index(), device.address());
+        if (device.read_runtime_config(runtime_config, sizeof(runtime_config))) {
+            std::printf("I2C: runtime-config response for interface %u at 0x%02X: %s\n",
+                        device.interface_index(), device.address(), runtime_config);
+        } else {
+            std::printf(
+                "I2C: runtime-config probe failed for interface %u at 0x%02X command=0x7A\n",
+                device.interface_index(), device.address());
+        }
+
         std::printf("I2C: sending wiegand-out status probe to interface %u address 0x%02X command=0x21\n",
                     device.interface_index(), device.address());
 
-        WiegandOutStatusResult status_result{};
+        Rp2350PacsProtocol::WiegandOutStatusReply status_result{};
         if (!device.read_wiegand_out_status(&status_result)) {
             std::printf(
                 "I2C: wiegand-out status probe failed for interface %u at 0x%02X command=0x21\n",
@@ -155,6 +182,50 @@ void PiWiegandDeviceManager::probe_and_log_devices() const {
                 "I2C: wiegand-out status decoded interface=%u echoed_command=0x%02X busy=%u queued=%u\n",
                 device.interface_index(), status_result.echoed_command, status_result.busy_flag,
                 status_result.queued_frame_count);
+        }
+
+        std::printf("I2C: sending output-status probe to interface %u address 0x%02X command=0x40\n",
+                    device.interface_index(), device.address());
+        Rp2350PacsProtocol::OutputStatusReply output_status{};
+        if (device.read_output_status(&output_status)) {
+            std::printf("I2C: output-status response for interface %u at 0x%02X bytes=%u raw=",
+                        device.interface_index(), device.address(), output_status.bytes_read);
+            for (unsigned int raw_index = 0; raw_index < output_status.bytes_read; ++raw_index) {
+                std::printf("%s%02X", raw_index == 0U ? "" : " ", output_status.raw[raw_index]);
+            }
+            std::printf("\n");
+            if (output_status.bytes_read >= 5U) {
+                std::printf(
+                    "I2C: output-status decoded interface=%u echoed_command=0x%02X state_bits=0x%02X pulse_bits=0x%02X\n",
+                    device.interface_index(), output_status.echoed_command,
+                    output_status.state_bits, output_status.pulse_bits);
+            }
+        } else {
+            std::printf(
+                "I2C: output-status probe failed for interface %u at 0x%02X command=0x40\n",
+                device.interface_index(), device.address());
+        }
+
+        std::printf("I2C: sending rgb-status probe to interface %u address 0x%02X command=0x50\n",
+                    device.interface_index(), device.address());
+        Rp2350PacsProtocol::RgbStatusReply rgb_status{};
+        if (device.read_rgb_status(&rgb_status)) {
+            std::printf("I2C: rgb-status response for interface %u at 0x%02X bytes=%u raw=",
+                        device.interface_index(), device.address(), rgb_status.bytes_read);
+            for (unsigned int raw_index = 0; raw_index < rgb_status.bytes_read; ++raw_index) {
+                std::printf("%s%02X", raw_index == 0U ? "" : " ", rgb_status.raw[raw_index]);
+            }
+            std::printf("\n");
+            if (rgb_status.bytes_read >= 5U) {
+                std::printf(
+                    "I2C: rgb-status decoded interface=%u current=0x%02X default=0x%02X pulse_active=%u\n",
+                    device.interface_index(), rgb_status.current_color,
+                    rgb_status.default_color, rgb_status.pulse_active);
+            }
+        } else {
+            std::printf(
+                "I2C: rgb-status probe failed for interface %u at 0x%02X command=0x50\n",
+                device.interface_index(), device.address());
         }
 
         if (runtime_config_ != nullptr && runtime_config_->wiegand.output_enabled) {
@@ -220,7 +291,7 @@ void PiWiegandDeviceManager::probe_and_log_devices() const {
         std::printf("I2C: sending event-read probe to interface %u address 0x%02X command=0x79\n",
                     device.interface_index(), device.address());
 
-        EventReadResult event_result{};
+        Rp2350PacsProtocol::EventReadReply event_result{};
         if (!device.read_next_event(&event_result)) {
             std::printf("I2C: event-read probe failed for interface %u at 0x%02X command=0x79\n",
                         device.interface_index(), device.address());

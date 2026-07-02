@@ -10,7 +10,7 @@ The codebase has already progressed beyond the original Milestone 5 bring-up not
 - DS2401 ROM CRC is validated before the value is accepted
 - DS2401 ROM reads now retry on failure
 - runtime MAC can be overridden from DS2401 before Ethernet startup
-- startup serial output can be gated by a push-button on `GP22`
+- startup serial output can be gated by a push-button on `GP9`
 - Ethernet startup prints the active IP address
 - LittleFS is used as the active onboard config store with factory fallback
 

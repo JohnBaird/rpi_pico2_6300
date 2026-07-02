@@ -59,10 +59,9 @@ constexpr BootConfig kMilestone1BootConfig{
         },
     .startup_gate =
         {
-            // GP22 is currently unused by the firmware and sits close to a GND pin
-            // on the Pico header, which makes it a good candidate for a simple
-            // push-button-to-ground startup gate.
-            .button_gpio_pin = 22,
+            // GP9 is currently free of board-reserved functions and can be used
+            // as an active-low startup gate push-button input.
+            .button_gpio_pin = 9,
             .active_low = true,
             .use_internal_pull_up = true,
         },

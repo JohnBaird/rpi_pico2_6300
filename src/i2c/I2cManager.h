@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config/RuntimeConfig.h"
+#include "i2c/ControllerIrqManager.h"
 #include "i2c/I2cCommandTransport.h"
 #include "i2c/PiWiegandDeviceManager.h"
 
@@ -25,6 +26,7 @@ class I2cManager {
 
     I2cCommandTransport transport_;
     PiWiegandDeviceManager wiegand_device_manager_;
+    ControllerIrqManager controller_irq_manager_;
     bool initialized_;
     const char* last_error_;
 };

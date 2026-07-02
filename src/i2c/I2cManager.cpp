@@ -32,6 +32,7 @@ I2cManager::I2cManager()
     : transport_(kI2cInstance, kShortTransferTimeoutUs, kLongTransferTimeoutUs,
                  kCommandSettleDelayUs),
       wiegand_device_manager_(),
+      controller_irq_manager_(),
       initialized_(false),
       last_error_("not_initialized") {}
 
@@ -50,6 +51,7 @@ bool I2cManager::init(const config::RuntimeConfig& runtime_config) {
     probe_expected_devices();
     probe_lcd();
     wiegand_device_manager_.probe_and_log_devices();
+    controller_irq_manager_.init(&wiegand_device_manager_);
 
     if (!read_rtc()) {
         std::puts("I2C: RTC read skipped or failed");
@@ -65,7 +67,7 @@ bool I2cManager::send_configured_wiegand_frame(unsigned char interface_index, ui
     return wiegand_device_manager_.send_configured_wiegand_frame(interface_index, card_number, result);
 }
 
-void I2cManager::service() {}
+void I2cManager::service() { controller_irq_manager_.service(); }
 
 bool I2cManager::status() const { return initialized_; }
 

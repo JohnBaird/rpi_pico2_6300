@@ -16,6 +16,8 @@ class Mcp9808TemperatureSensor {
 
   private:
     bool read_register(uint8_t register_address, uint8_t* destination, unsigned int length);
+    bool verify_sensor_identity();
+    float decode_temperature_c(const uint8_t* temperature_bytes) const;
 
     bool initialized_;
     bool present_;

@@ -52,7 +52,7 @@ Create firmware for a W6300-EVB-Pico2 controller that:
 - I2C RTC, likely DS3231 at address `0x68`.
 - I2C 4x20 LCD, likely address `0x27` or `0x3F`.
 - I2C Wiegand processors at `0x30` to `0x37`.
-- 8 dedicated IRQ input pins from the Wiegand processors.
+- 4 dedicated IRQ input pins currently allocated from the Wiegand processors, with interfaces 4 to 7 presently operating without assigned IRQ lines.
 - UART RS485 bus using a 75176-type transceiver with RTS/DE direction control.
 - 8 RS485 addressed devices, linked to the same logical interface numbers as the Wiegand processors.
 - Status LED.
@@ -158,15 +158,15 @@ Motherboard:
   Interface 3 -> I2C 0x33 / IRQ3
 
 Extension board:
-  Interface 4 -> I2C 0x34 / IRQ4
-  Interface 5 -> I2C 0x35 / IRQ5
-  Interface 6 -> I2C 0x36 / IRQ6
-  Interface 7 -> I2C 0x37 / IRQ7
+  Interface 4 -> I2C 0x34 / no IRQ assigned
+  Interface 5 -> I2C 0x35 / no IRQ assigned
+  Interface 6 -> I2C 0x36 / no IRQ assigned
+  Interface 7 -> I2C 0x37 / no IRQ assigned
 ```
 
 ### 10-Pin Ribbon Cable Between Motherboard and Extension Board
 
-The expansion board shall connect using a 10-pin ribbon cable.
+The expansion board may later connect using a 10-pin ribbon cable, but IRQ4 to IRQ7 are not currently allocated on the main board.
 
 Final pinout:
 
@@ -174,10 +174,10 @@ Final pinout:
 1   +12V
 2   +12V
 3   GND
-4   IRQ4
-5   IRQ5
-6   IRQ6
-7   IRQ7
+4   reserved / future use
+5   reserved / future use
+6   reserved / future use
+7   reserved / future use
 8   GND
 9   I2C_SDA
 10  I2C_SCL
@@ -926,19 +926,16 @@ The main controller should consider a Wiegand processor busy for about 50 ms aft
 
 ## 22. Wiegand IRQ Inputs and Buffered Messages
 
-There are 8 IRQ input pins from the Wiegand processors to the main W6300-Pico2.
+The protocol supports up to 8 downstream Wiegand processors, but the current board pin allocation only reserves 4 IRQ input pins from the downstream processors to the main W6300-Pico2.
 
 IRQ mapping:
 
 ```text
-IRQ0 -> Interface 0 -> I2C 0x30
-IRQ1 -> Interface 1 -> I2C 0x31
-IRQ2 -> Interface 2 -> I2C 0x32
-IRQ3 -> Interface 3 -> I2C 0x33
-IRQ4 -> Interface 4 -> I2C 0x34
-IRQ5 -> Interface 5 -> I2C 0x35
-IRQ6 -> Interface 6 -> I2C 0x36
-IRQ7 -> Interface 7 -> I2C 0x37
+IRQ0 -> Interface 0 -> I2C 0x30 -> GP14
+IRQ1 -> Interface 1 -> I2C 0x31 -> GP2
+IRQ2 -> Interface 2 -> I2C 0x32 -> GP3
+IRQ3 -> Interface 3 -> I2C 0x33 -> GP7
+Interfaces 4..7 -> I2C 0x34..0x37 -> no IRQ pin currently assigned
 ```
 
 Important rule:
@@ -1452,7 +1449,7 @@ I2C SCL               GP5
 
 DS2401 1-Wire         GP6
 
-Startup gate button   GP22
+Startup gate button   GP9
   active-low
   internal pull-up enabled
 
@@ -1463,13 +1460,13 @@ W6300 QSPI IO2        GP20   board-reserved
 W6300 QSPI IO3        GP21   board-reserved
 
 IRQ0                  GP14   reserved
-IRQ1                  GP15   reserved
-IRQ2                  GP16   reserved
-IRQ3                  GP2    reserved
-IRQ4                  GP3    reserved
-IRQ5                  GP7    reserved
-IRQ6                  GP8    reserved
-IRQ7                  GP9    reserved
+IRQ1                  GP2    reserved
+IRQ2                  GP3    reserved
+IRQ3                  GP7    reserved
+GP8                   not used
+GP9                   startup gate button
+GP15                  not used (board-reserved for W6300 INTn)
+GP16                  not used (board-reserved for W6300 CSn)
 
 SD copy button        GP26   reserved
   active-low
@@ -1680,7 +1677,7 @@ Publish transaction result.
 
 ```text
 Implement Wiegand IRQ manager.
-Configure 8 IRQ GPIO inputs.
+Configure allocated IRQ GPIO inputs.
 Queue events from GPIO ISR.
 Read tagged messages from Wiegand processor buffer when IRQ is asserted.
 Publish corresponding MQTT events.

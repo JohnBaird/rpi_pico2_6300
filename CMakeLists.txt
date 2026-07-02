@@ -55,10 +55,12 @@ add_executable(rpi_pico2_6300
     src/devices/LedManager.cpp
     src/devices/Mcp9808TemperatureSensor.cpp
     src/devices/Rp2350TemperatureSensor.cpp
+    src/i2c/ControllerIrqManager.cpp
     src/i2c/I2cCommandTransport.cpp
     src/i2c/I2cManager.cpp
-    src/i2c/PiWiegandI2cDevice.cpp
+    src/i2c/PacsControllerDevice.cpp
     src/i2c/PiWiegandDeviceManager.cpp
+    src/i2c/Rp2350PacsProtocol.cpp
     src/wiegand/WiegandBuilder.cpp
     src/mqtt/MqttManager.cpp
     src/network/EthernetManager.cpp

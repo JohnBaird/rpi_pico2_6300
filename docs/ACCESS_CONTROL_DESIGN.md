@@ -161,6 +161,16 @@ Responsibilities:
 - payload decoding
 - conversion between raw wire format and typed controller data
 
+Current firmware status:
+
+- `Rp2350PacsProtocol` has now been started in the gateway codebase as the new protocol seam.
+- The first implemented command families in this protocol layer are:
+  - `0x20` / `0x21` Wiegand-out send and status
+  - `0x40` / `0x41` / `0x42` output status, set, and pulse
+  - `0x50` / `0x51` / `0x52` RGB status, set, and pulse
+  - `0x78` / `0x79` / `0x7A` build-info, event-read, and runtime-config read
+- This layer should be expanded command-by-command and reused by all future controller APIs.
+
 ### `PacsControllerDevice`
 
 Purpose: represent one downstream I2C PACS controller at one fixed address such as `0x30`.
@@ -193,6 +203,12 @@ Responsibilities:
 - expose one consistent high-level API per downstream controller
 - hide I2C/protocol details from MQTT and business-logic layers
 - enforce controller-local invariants
+
+Current firmware status:
+
+- `PacsControllerDevice` has now been started in the gateway codebase as the generic per-address controller wrapper.
+- It already exposes typed methods for the currently known protocol families listed above.
+- Existing startup validation still uses the older live path for proven behavior, but future command migrations should move into `PacsControllerDevice` rather than add more one-off device methods.
 
 ### `PacsControllerManager`
 
